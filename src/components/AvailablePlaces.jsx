@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
-import Places from './Places.jsx';
-import Error from './Error.jsx';
+import { useState, useEffect } from "react";
+import Places from "./Places.jsx";
+import Error from "./Error.jsx";
+import { sortPlacesByDistance } from "../loc.js";
+import { fetchAvailablePlaces } from "../hhtp.js";
 
 export default function AvailablePlaces({ onSelectPlace }) {
   const [isFetching, setIsFetching] = useState();
-  const [availablePlaces, setAvailablePlaces] = useState([])
+  const [availablePlaces, setAvailablePlaces] = useState([]);
   const [error, setError] = useState();
 
   useEffect(() => {
@@ -12,25 +14,31 @@ export default function AvailablePlaces({ onSelectPlace }) {
       setIsFetching(true);
 
       try {
-        const response = await fetch("http://localhost:3000/places");
-        const resData = await response.json();
+        const places = await fetchAvailablePlaces();
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch places");
-        }
-        setAvailablePlaces(resData.places);
+        navigator.geolocation.getCurrentPosition((position) => {
+          const sortedPlaces = sortPlacesByDistance(
+            places,
+            position.coords.latitude,
+            position.coords.longitude
+          );
+          setAvailablePlaces(sortedPlaces);
+          setIsFetching(false);
+        });
       } catch (error) {
-        setError({ message: error.message || 'could not fetch places, please try again leater'});
+        setError({
+          message:
+            error.message || "could not fetch places, please try again leater",
+        });
       }
       setIsFetching(false);
     }
     fetchPlaces();
   }, []);
 
-  if(error) {
-    return <Error title="An error occured..." message={error.message} />
+  if (error) {
+    return <Error title="An error occured..." message={error.message} />;
   }
-
 
   //one method can be using then().
   // useEffect(() => {
@@ -42,7 +50,6 @@ export default function AvailablePlaces({ onSelectPlace }) {
   //       setAvailablePlaces(resData.places);
   //     });
   // }, []);
-
 
   return (
     <Places
